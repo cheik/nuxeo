@@ -16,8 +16,13 @@
  */
 package org.nuxeo.ecm.restapi.server.jaxrs;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 import java.util.HashSet;
 import java.util.Set;
+
+import javax.validation.Constraint;
+import javax.ws.rs.core.MediaType;
 
 import org.nuxeo.ecm.automation.jaxrs.io.JsonAdapterWriter;
 import org.nuxeo.ecm.automation.jaxrs.io.JsonLoginInfoWriter;
@@ -39,6 +44,7 @@ import org.nuxeo.ecm.automation.jaxrs.io.operations.JsonRequestReader;
 import org.nuxeo.ecm.automation.jaxrs.io.operations.MultiPartFormRequestReader;
 import org.nuxeo.ecm.automation.jaxrs.io.operations.MultiPartRequestReader;
 import org.nuxeo.ecm.automation.jaxrs.io.operations.UrlEncodedFormRequestReader;
+import org.nuxeo.ecm.core.api.validation.DocumentValidationReport;
 import org.nuxeo.ecm.restapi.jaxrs.io.directory.DirectoryEntriesWriter;
 import org.nuxeo.ecm.restapi.jaxrs.io.directory.DirectoryEntryReader;
 import org.nuxeo.ecm.restapi.jaxrs.io.directory.DirectoryEntryWriter;
@@ -55,11 +61,9 @@ import org.nuxeo.ecm.restapi.jaxrs.io.usermanager.NuxeoGroupWriter;
 import org.nuxeo.ecm.restapi.jaxrs.io.usermanager.NuxeoPrincipalListWriter;
 import org.nuxeo.ecm.restapi.jaxrs.io.usermanager.NuxeoPrincipalReader;
 import org.nuxeo.ecm.restapi.jaxrs.io.usermanager.NuxeoPrincipalWriter;
-import org.nuxeo.ecm.restapi.jaxrs.io.validation.ConstraintViolationWriter;
-import org.nuxeo.ecm.restapi.jaxrs.io.validation.ConstraintWriter;
-import org.nuxeo.ecm.restapi.jaxrs.io.validation.DocumentValidationExceptionMapper;
-import org.nuxeo.ecm.restapi.jaxrs.io.validation.DocumentValidationReportWriter;
 import org.nuxeo.ecm.webengine.app.WebEngineModule;
+import org.nuxeo.ecm.webengine.jaxrs.exceptions.DocumentValidationExceptionMapper;
+import org.nuxeo.ecm.webengine.jaxrs.marshallers.PartialCoreIOWriterDelegate;
 
 /**
  * @since 5.8
@@ -114,9 +118,14 @@ public class APIModule extends WebEngineModule {
         result.add(new DocumentTypesWriter());
         result.add(new FacetWriter());
         result.add(new FacetsWriter());
-        result.add(new ConstraintWriter());
-        result.add(new ConstraintViolationWriter());
-        result.add(new DocumentValidationReportWriter());
+        // result.add(new FullCoreIOWriterDelegate());
+        result.add(new PartialCoreIOWriterDelegate() {
+            @Override
+            protected boolean accept(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+                return MediaType.APPLICATION_JSON_TYPE.isCompatible(mediaType)
+                        && (Constraint.class.isAssignableFrom(type) || DocumentValidationReport.class.isAssignableFrom(type));
+            }
+        });
         result.add(new DocumentValidationExceptionMapper());
 
         return result;

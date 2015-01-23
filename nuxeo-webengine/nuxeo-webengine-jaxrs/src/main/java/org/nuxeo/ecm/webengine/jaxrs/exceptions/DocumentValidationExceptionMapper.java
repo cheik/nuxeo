@@ -15,7 +15,7 @@
  *     nchapurlatn <nc@nuxeo.com>
  */
 
-package org.nuxeo.ecm.restapi.jaxrs.io.validation;
+package org.nuxeo.ecm.webengine.jaxrs.exceptions;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;

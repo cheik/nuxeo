@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://nuxeo.com/schemas/validationSample"
-  xmlns:nxv="http://nuxeo.com/schemas/validationSample" xmlns:nxsv="http://www.nuxeo.org/ecm/schemas/core/validation/">
+  xmlns:nxv="http://nuxeo.com/schemas/validationSample" xmlns:nxsv="http://www.nuxeo.org/ecm/schemas/core/validation/"
+  xmlns:ref="http://www.nuxeo.org/ecm/schemas/core/external-references/">
 
   <xs:element name="users">
     <xs:complexType>
@@ -29,6 +30,18 @@
       </xs:simpleType>
     </xs:attribute>
   </xs:complexType>
+
+  <xs:element name="userRefs">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="userRef" minOccurs="0" maxOccurs="unbounded">
+          <xs:simpleType>
+            <xs:restriction base="xs:string" ref:resolver="userManagerResolver" ref:type="user" />
+          </xs:simpleType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>
 

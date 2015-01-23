@@ -18,6 +18,7 @@ package org.nuxeo.ecm.restapi.test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.nuxeo.ecm.automation.jaxrs.io.documents.JsonDocumentWriter.DOCUMENT_PROPERTIES_HEADER;
 
 import java.io.IOException;
 
@@ -132,6 +133,18 @@ public class DocumentValidationTest extends BaseTest {
         checkResponseHasErrors(response);
     }
 
+    @Test
+    public void testPropertyLoading() throws Exception {
+        DocumentModel doc = session.createDocumentModel("/", "doc1", "ValidatedDocument");
+        doc.getProperty("userRefs").addValue("user:Administrator");
+        doc = session.createDocument(doc);
+        fetchInvalidations();
+        ClientResponse response = service.path("path/doc1").queryParam("embed", "*").header(DOCUMENT_PROPERTIES_HEADER,
+                "*").get(ClientResponse.class);
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        IOUtils.copy(response.getEntityInputStream(), System.out);
+    }
+
     private void checkResponseHasErrors(ClientResponse response) throws IOException, JsonProcessingException {
         String responseText = IOUtils.toString(response.getEntityInputStream());
         // System.out.println(responseText);
@@ -140,9 +153,9 @@ public class DocumentValidationTest extends BaseTest {
         assertEquals(2, node.get("number").getValueAsInt());
         JsonNode violations = node.get("violations");
         JsonNode violation1 = violations.getElements().next();
-        assertEquals("pattern_constraint", violation1.get("constraint").get("name").getTextValue());
+        assertEquals("PatternConstraint", violation1.get("constraint").get("name").getTextValue());
         JsonNode violation2 = violations.getElements().next();
-        assertEquals("pattern_constraint", violation2.get("constraint").get("name").getTextValue());
+        assertEquals("PatternConstraint", violation2.get("constraint").get("name").getTextValue());
     }
 
 }
