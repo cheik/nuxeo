@@ -14,7 +14,8 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- * $Id: UIEditableList.java 28610 2008-01-09 17:13:52Z sfermigier $
+ * Contributors:
+ *     Anahide Tchertchian
  */
 
 package org.nuxeo.ecm.platform.ui.web.component.list;
@@ -64,11 +65,10 @@ import org.nuxeo.ecm.platform.ui.web.util.ComponentTagUtils;
 import com.sun.faces.facelets.tag.jsf.ComponentSupport;
 
 /**
- * Editable table component.
- * <p>
- * Allows to add/remove elements from an {@link UIJavascriptList}, inspired from Trinidad UIXCollection component.
+ * Editable list component, relying on client side javascript code to handle adding/removing element from the target
+ * list.
  *
- * @author <a href="mailto:at@nuxeo.com">Anahide Tchertchian</a>
+ * @since 7.2
  */
 public class UIJavascriptList extends UIInput implements NamingContainer, ResettableComponent {
 
@@ -77,6 +77,10 @@ public class UIJavascriptList extends UIInput implements NamingContainer, Resett
     public static final String COMPONENT_FAMILY = UIJavascriptList.class.getName();
 
     private static final Log log = LogFactory.getLog(UIJavascriptList.class);
+
+    protected static final String TEMPLATE_INDEX_MARKER = "TEMPLATE_INDEX_MARKER";
+
+    protected static final String IS_LIST_TEMPLATE_VAR = "isListTemplate";
 
     // use this key to indicate uninitialized state.
     private static final Object _NULL = new Object();
@@ -804,11 +808,13 @@ public class UIJavascriptList extends UIInput implements NamingContainer, Resett
      */
     @Override
     @SuppressWarnings("deprecation")
-       public String getContainerClientId(FacesContext context) {
+    public String getContainerClientId(FacesContext context) {
         String id = super.getClientId(context);
         int index = getRowIndex();
-        if (index != -1) {
-            id += NamingContainer.SEPARATOR_CHAR + String.valueOf(index);
+        if (index == -2) {
+            id += SEPARATOR_CHAR + TEMPLATE_INDEX_MARKER;
+        } else if (index != -1) {
+            id += SEPARATOR_CHAR + String.valueOf(index);
         }
         return id;
     }
@@ -851,6 +857,47 @@ public class UIJavascriptList extends UIInput implements NamingContainer, Resett
         }
 
         processFacetsAndChildren(context, PhaseId.RENDER_RESPONSE);
+        encodeTemplate(context);
+    }
+
+    /**
+     * Renders an element using rowIndex -2 and client side marker {@link #TEMPLATE_INDEX_MARKER}.
+     * <p>
+     * This element will be used on client side by js code to handle addition of a new element.
+     */
+    protected void encodeTemplate(FacesContext context) {
+        int oldIndex = getRowIndex();
+        setRowIndex(-2);
+
+        // expose a boolean that can be used on client side to hide this element without disturbing the DOM
+        Map<String, Object> requestMap = getFacesContext().getExternalContext().getRequestMap();
+        boolean hasVar = false;
+        if (requestMap.containsKey(IS_LIST_TEMPLATE_VAR)) {
+            hasVar = true;
+        }
+        Object oldIsTemplateBoolean = requestMap.remove(IS_LIST_TEMPLATE_VAR);
+        requestMap.put(IS_LIST_TEMPLATE_VAR, Boolean.TRUE);
+
+        if (getChildCount() > 0) {
+            for (UIComponent kid : getChildren()) {
+                if (!kid.isRendered()) {
+                    continue;
+                }
+                try {
+                    ComponentSupport.encodeRecursive(context, kid);
+                } catch (IOException err) {
+                    log.error("Error while rendering component " + kid);
+                }
+            }
+        }
+        setRowIndex(oldIndex);
+
+        // restore
+        if (hasVar) {
+            requestMap.put(IS_LIST_TEMPLATE_VAR, oldIsTemplateBoolean);
+        } else {
+            requestMap.remove(IS_LIST_TEMPLATE_VAR);
+        }
     }
 
     // events
