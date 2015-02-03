@@ -177,6 +177,57 @@
         </c:when>
 
         <c:otherwise>
+          <nxu:jsInputList value="#{fieldOrValue}"
+            id="#{widget.id}_inputjs"
+            model="model"
+            template="#{templateValue}"
+            required="#{widgetProperty_required}"
+            diff="#{widgetProperty_diff}"
+            rendered="#{isEditMode or not empty fieldOrValue}">
+            <nxu:validateDocumentConstraint handleSubProperties="false" />
+            <h:panelGrid columns="#{isEditMode and showActions?2:1}"
+              style="#{isListTemplate?'display:none;':''}">
+              <c:if test="#{showActions}">
+                <h:panelGroup styleClass="listWidgetActionsTable">
+                  <ui:include src="/widgets/list_widget_template_actions.xhtml" />
+                </h:panelGroup>
+              </c:if>
+              <h:panelGroup>
+                <table>
+                  <tbody>
+                    <nxl:subWidget>
+                      <tr>
+                        <c:if test="#{displaySubLabels}">
+                          <td class="boldColumn">
+                            <ui:include src="/widgets/incl/widget_label_template.xhtml">
+                              <ui:param name="labelStyleClass"
+                                value="boldLabel #{widgetProperty_subLabelStyleClass}" />
+                            </ui:include>
+                            <h:outputText value=" " />
+                          </td>
+                        </c:if>
+                        <td class="fieldColumn">
+                          <nxl:widget widget="#{widget}" value="#{model.rowData}"
+                            onclick="#{widgetProperty_onclick}" onchange="#{widgetProperty_onchange}" />
+                        </td>
+                      </tr>
+                    </nxl:subWidget>
+                  </tbody>
+                </table>
+              </h:panelGroup>
+            </h:panelGrid>
+
+            <ui:fragment rendered="#{isListTemplate}">
+              <a class="button smallButton listWidgetActionAdd" href="#nogo"
+                onclick="nuxeo.utils.addFromListTemplate(jQuery(this).prev(), jQuery(this).next()); return false;">
+                <h:outputText value="#{messages['command.add']} js" />
+              </a>
+              <h:inputHidden id="#{widget.id}_numberOfItems">
+                <f:attribute name="value" value="#{model.rowCount}" />
+              </h:inputHidden>
+            </ui:fragment>
+          </nxu:jsInputList>
+
           <nxu:inputList value="#{fieldOrValue}"
             id="#{widget.id}_input" model="model"
             template="#{templateValue}"
@@ -218,6 +269,8 @@
 
       </c:choose>
 
+      <h:message styleClass="errorMessage" for="#{widget.id}_inputjs"
+        id="#{widget.id}_messagejs" />
       <h:message styleClass="errorMessage" for="#{widget.id}_input"
         id="#{widget.id}_message" />
 
