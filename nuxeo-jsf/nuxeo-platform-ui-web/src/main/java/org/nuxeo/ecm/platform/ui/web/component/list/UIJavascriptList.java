@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -47,6 +48,7 @@ import javax.faces.component.visit.VisitContext;
 import javax.faces.component.visit.VisitHint;
 import javax.faces.component.visit.VisitResult;
 import javax.faces.context.FacesContext;
+import javax.faces.context.ResponseWriter;
 import javax.faces.event.FacesEvent;
 import javax.faces.event.PhaseId;
 
@@ -63,6 +65,7 @@ import org.nuxeo.ecm.platform.ui.web.model.ProtectedEditableModel;
 import org.nuxeo.ecm.platform.ui.web.model.impl.EditableModelImpl;
 import org.nuxeo.ecm.platform.ui.web.model.impl.EditableModelRowEvent;
 import org.nuxeo.ecm.platform.ui.web.model.impl.ProtectedEditableModelImpl;
+import org.nuxeo.ecm.platform.ui.web.tag.fn.Functions;
 import org.nuxeo.ecm.platform.ui.web.util.ComponentTagUtils;
 
 import com.sun.faces.facelets.tag.jsf.ComponentSupport;
@@ -870,7 +873,7 @@ public class UIJavascriptList extends UIInput implements NamingContainer, Resett
      * <p>
      * This element will be used on client side by js code to handle addition of a new element.
      */
-    protected void encodeTemplate(FacesContext context) {
+    protected void encodeTemplate(FacesContext context) throws IOException {
         int oldIndex = getRowIndex();
         setRowIndex(-2);
 
@@ -882,6 +885,14 @@ public class UIJavascriptList extends UIInput implements NamingContainer, Resett
         }
         Object oldIsTemplateBoolean = requestMap.remove(IS_LIST_TEMPLATE_VAR);
         requestMap.put(IS_LIST_TEMPLATE_VAR, Boolean.TRUE);
+
+        // render the template as escaped html
+        ResponseWriter oldResponseWriter = context.getResponseWriter();
+        StringWriter cacheingWriter = new StringWriter();
+
+        ResponseWriter newResponseWriter = context.getResponseWriter().cloneWithWriter(cacheingWriter);
+
+        context.setResponseWriter(newResponseWriter);
 
         if (getChildCount() > 0) {
             for (UIComponent kid : getChildren()) {
@@ -895,6 +906,18 @@ public class UIJavascriptList extends UIInput implements NamingContainer, Resett
                 }
             }
         }
+
+        cacheingWriter.flush();
+        cacheingWriter.close();
+
+        context.setResponseWriter(oldResponseWriter);
+
+        String html = Functions.htmlEscape(cacheingWriter.toString());
+        ResponseWriter writer = context.getResponseWriter();
+        writer.write("<script type='text/x-html-template'>");
+        writer.write(html);
+        writer.write("</script>");
+
         setRowIndex(oldIndex);
 
         // restore
@@ -1155,7 +1178,7 @@ public class UIJavascriptList extends UIInput implements NamingContainer, Resett
         String[] v = requestMap.get(clientId);
 
         try {
-            int[] indexes = new int[v.length - 1]; // skip the last value since it comes from the template
+            int[] indexes = new int[v.length];
             for (int i=0; i < indexes.length; i++) {
                 indexes[i] = Integer.valueOf(v[i]);
             }
